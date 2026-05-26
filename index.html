@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>한국의집 MAC 발주 입력</title>
+
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="MAC 발주">
+<meta name="theme-color" content="#111111">
+
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:"Noto Sans KR","Malgun Gothic",Arial,sans-serif;
+  background:#f4f6fa;
+  color:#111;
+}
+.container{
+  max-width:1200px;
+  margin:0 auto;
+  padding:24px 14px 50px;
+}
+h1{
+  margin:0 0 18px;
+  font-size:42px;
+  font-weight:800;
+}
+.notice{
+  margin:0 0 16px;
+  background:#fff7e8;
+  border:1px solid #f2d39b;
+  color:#6b4d00;
+  padding:14px 16px;
+  border-radius:14px;
+  line-height:1.5;
+  font-size:14px;
+}
+.card,.panel{
+  background:#fff;
+  border-radius:20px;
+  box-shadow:0 10px 30px rgba(0,0,0,.06);
+}
+.card{overflow:hidden}
+table{
+  width:100%;
+  border-collapse:collapse;
+  table-layout:fixed;
+}
+thead th{
+  background:#eef2f6;
+  font-size:18px;
+  font-weight:800;
+  padding:16px 10px;
+  text-align:center;
+}
+tbody td{
+  border-bottom:1px solid #eceff3;
+  padding:12px 8px;
+  font-size:15px;
+  vertical-align:middle;
+  background:#fff;
+}
+.col-name{width:52%;font-weight:600;line-height:1.4}
+.col-qty{width:28%;text-align:center}
+.col-unit{width:20%;text-align:center;font-weight:700;color:#444}
+.qty-input{
+  width:100%;
+  max-width:110px;
+  height:44px;
+  border:1px solid #cfd6df;
+  border-radius:10px;
+  text-align:center;
+  font-size:16px;
+}
+.bottom-box{margin-top:22px}
+.panel{padding:20px}
+.panel h2{margin:0 0 14px;font-size:22px}
+.row{
+  display:grid;
+  grid-template-columns:160px 1fr;
+  gap:14px;
+  align-items:center;
+  margin-bottom:12px;
+}
+.row label{font-weight:700}
+.row input,.row textarea{
+  width:100%;
+  border:1px solid #cfd6df;
+  border-radius:12px;
+  padding:12px 14px;
+  font-size:16px;
+}
+.row input{height:48px}
+.row textarea{min-height:120px;resize:vertical}
+.btn-wrap{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px}
+button{
+  border:none;
+  border-radius:12px;
+  padding:14px 20px;
+  font-size:15px;
+  font-weight:800;
+  cursor:pointer;
+  min-height:48px;
+}
+.btn-primary{background:#111;color:#fff}
+.btn-sub{background:#eef2f6;color:#111}
+.preview{
+  margin-top:14px;
+  background:#f8fafc;
+  border:1px solid #e5eaf0;
+  border-radius:14px;
+  padding:18px;
+  min-height:180px;
+  white-space:pre-wrap;
+  line-height:1.7;
+  font-size:15px;
+}
+.note{color:#666;font-size:13px;margin-top:10px;line-height:1.5}
+
+@media(max-width:768px){
+  .container{padding:18px 10px 40px}
+  h1{font-size:30px}
+  thead th{font-size:13px;padding:12px 4px}
+  tbody td{font-size:13px;padding:10px 4px}
+  .col-name{width:48%;font-size:11px}
+  .col-qty{width:30%}
+  .col-unit{width:22%;font-size:11px}
+  .qty-input{max-width:84px;height:38px;font-size:15px}
+  .row{grid-template-columns:1fr}
+  .btn-wrap{flex-direction:column}
+  .btn-wrap button{width:100%}
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+  <h1>한국의집 MAC 발주 입력</h1>
+
+  <div class="notice">
+    아이폰에서 카카오톡으로 열었는데 버튼이 잘 안 되면<br>
+    <strong>카카오톡 우측 상단 메뉴(···) → Safari에서 열기</strong>로 접속해 주세요.
+  </div>
+
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th>품목</th>
+          <th>수량</th>
+          <th>단위</th>
+        </tr>
+      </thead>
+      <tbody id="orderTable"></tbody>
+    </table>
+  </div>
+
+  <div class="bottom-box">
+    <div class="panel">
+      <h2>기본 정보</h2>
+
+      <div class="row">
+        <label for="orderDate">발주일자</label>
+        <input type="date" id="orderDate" />
+      </div>
+
+      <div class="row">
+        <label for="storeName">매장명</label>
+        <input type="text" id="storeName" value="한국의집" />
+      </div>
+
+      <div class="row">
+        <label for="vendorName">발주처명</label>
+        <input type="text" id="vendorName" value="MAC" />
+      </div>
+
+      <div class="row">
+        <label for="receiverPhone">수신 휴대폰 번호</label>
+        <input type="tel" id="receiverPhone" inputmode="numeric" placeholder="예: 01012345678" />
+      </div>
+
+      <div class="row">
+        <label for="remark">비고</label>
+        <textarea id="remark" placeholder="추가 요청사항이나 비고를 입력하세요."></textarea>
+      </div>
+
+      <div class="btn-wrap">
+        <button type="button" class="btn-primary" onclick="generateOrder()">발주문 생성</button>
+        <button type="button" class="btn-primary" onclick="saveAndSend()">시트저장</button>
+        <button type="button" class="btn-sub" onclick="copyText()">발주문 복사</button>
+        <button type="button" class="btn-sub" onclick="resetForm()">초기화</button>
+      </div>
+
+      <div class="preview" id="result">발주문이 여기 표시됩니다.</div>
+      <div class="note">저장 버튼을 누르면 새 구글시트 발주내역에 저장됩니다.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzD13nvw7Ia6a3lj1QNamY6pRU4bOeUyC2bxXauwuCO8LZdOJO5uXwVtwAzVLY3uSqo/exec";
+
+const items = [
+  ["(더큰) 매콤만능비빔당","BOX"],
+  ["(더큰) 소바만능비빔장","BOX"],
+  ["(더큰) 유린기소스","BOX"],
+  ["(더큰) 닭갈비양념소스","BOX"],
+  ["(더큰) 한우스테이크","BOX"],
+  ["(더큰) 밥도둑강된장","BOX"],
+  ["(더큰) 쭈꾸미볶음","BOX"],
+  ["(더큰) 순살고등어구이","BOX"],
+  ["(더큰) 궁중탕","BOX"],
+  ["(더큰) 대파육개장","BOX"],
+  ["(더큰) 왕갈비찜","BOX"],
+  ["(더큰) 왕갈비탕","BOX"],
+  ["(더큰) 황태탕","BOX"],
+
+  ["냉동 절단 주꾸미(L사이즈)","BOX"],
+  ["계란지단채 (풍림 얇은채 700g)","BOX"],
+  ["블랙타이거새우","EA"],
+  ["참다음 매실원액","BOX"],
+
+  ["사옹원 소고기 육전","EA"],
+  ["사옹원 김치전","EA"],
+  ["사옹원 애호박전","EA"],
+  ["사옹원 단호박전","EA"],
+  ["사옹원 감자전","EA"],
+  ["사옹원 한돈육전","EA"],
+  ["사옹원 녹두전","EA"],
+  ["사옹원 깻잎전","EA"],
+
+  ["논우렁살 (국산 700g 탈각/자숙)","EA"],
+  ["냉동 다진마늘 (1kg)","EA"],
+  ["근산 냉동 깐은행 (500g.중국산)","EA"],
+  ["임꺽정떡갈비 (1.2kg 100g×12개입)","EA"],
+  ["심플로트 냉동감자 (데이터잼2.27kg)","EA"],
+  ["생705고추냉이(음트리.700g)","EA"],
+  ["진간장 S (샘표15L)","EA"],
+  ["국간장(더오늘.13L)","EA"],
+  ["프레시원 참기름","EA"],
+  ["멸치육수 (면사랑.프리미엄밑국물 1.8L)","EA"],
+  ["멸치볶음","EA"],
+  ["오뚜기 스테이크소스","EA"],
+  ["프레시원 조미김가루 (1kg)","EA"],
+  ["미원 (대상.1kg)","EA"],
+  ["땅콩가루 .고운분 (1kg)","EA"],
+  ["이금기 노두유 (프리미엄500ml)","EA"],
+  ["소갈비양념(청정원.10kg)","EA"],
+  ["채초생강(백색.1kg)","EA"],
+
+  ["핸드메이트 니트릴장갑 (블랙S 100매)","BOX"],
+  ["핸드메이트 니트릴장갑 (블랙M 100매)","BOX"],
+  ["핸드메이트 니트릴장갑 (블랙L 100매)","BOX"],
+  ["페이퍼타올(프레시원핸드타올_4500매)","BOX"],
+
+  ["프레시원 식기세척기 세제 (18L)","EA"],
+  ["프레시원 식기세척기 린스 (18L)","EA"],
+  ["하이퐁물비누(11.8L)","EA"]
+];
+
+const orderTable = document.getElementById("orderTable");
+const resultBox = document.getElementById("result");
+
+items.forEach((item, i) => {
+  orderTable.innerHTML += `
+    <tr>
+      <td class="col-name">${escapeHtml(item[0])}</td>
+      <td class="col-qty">
+        <input class="qty-input" type="number" id="q${i}" min="0" step="1" inputmode="numeric" />
+      </td>
+      <td class="col-unit">${escapeHtml(item[1])}</td>
+    </tr>
+  `;
+});
+
+setTodayDate();
+
+function setTodayDate(){
+  const today = new Date();
+  document.getElementById("orderDate").value =
+    today.getFullYear() + "-" +
+    String(today.getMonth() + 1).padStart(2, "0") + "-" +
+    String(today.getDate()).padStart(2, "0");
+}
+
+function escapeHtml(text){
+  return String(text)
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#039;");
+}
+
+function collectOrderData(){
+  const orderItems = [];
+
+  items.forEach((item, i) => {
+    const qty = document.getElementById(`q${i}`).value;
+    if (qty !== "" && Number(qty) > 0) {
+      orderItems.push({
+        name:item[0],
+        qty:Number(qty),
+        unit:item[1]
+      });
+    }
+  });
+
+  return {
+    orderDate:document.getElementById("orderDate").value,
+    storeName:document.getElementById("storeName").value.trim(),
+    vendorName:document.getElementById("vendorName").value.trim(),
+    receiverPhone:document.getElementById("receiverPhone").value.replace(/[^0-9]/g,""),
+    remark:document.getElementById("remark").value.trim(),
+    orderItems
+  };
+}
+
+function makeOrderText(data){
+  let text = `[${data.storeName} ${data.vendorName} 발주]\n`;
+  text += `발주일자: ${data.orderDate}\n\n`;
+
+  data.orderItems.forEach(item => {
+    text += `${item.name} ${item.qty}${item.unit}\n`;
+  });
+
+  if (data.remark) {
+    text += `\n[비고]\n${data.remark}\n`;
+  }
+
+  text += `\n확인 부탁드립니다.`;
+  return text;
+}
+
+function validateData(data){
+  if (!data.orderDate) return alert("발주일자를 입력해 주세요."), false;
+  if (!data.storeName) return alert("매장명을 입력해 주세요."), false;
+  if (!data.vendorName) return alert("발주처명을 입력해 주세요."), false;
+  if (data.orderItems.length === 0) return alert("수량을 입력한 품목이 없습니다."), false;
+  return true;
+}
+
+function generateOrder(){
+  const data = collectOrderData();
+  if (!validateData(data)) return;
+  resultBox.innerText = makeOrderText(data);
+}
+
+function copyText(){
+  const text = resultBox.innerText.trim();
+  if (!text || text === "발주문이 여기 표시됩니다.") {
+    alert("먼저 발주문을 생성해 주세요.");
+    return;
+  }
+
+  navigator.clipboard.writeText(text)
+    .then(() => alert("복사되었습니다."))
+    .catch(() => alert("복사에 실패했습니다. 길게 눌러 복사해 주세요."));
+}
+
+function resetForm(){
+  items.forEach((_, i) => {
+    document.getElementById(`q${i}`).value = "";
+  });
+  document.getElementById("remark").value = "";
+  resultBox.innerText = "발주문이 여기 표시됩니다.";
+  setTodayDate();
+}
+
+async function saveAndSend(){
+  const data = collectOrderData();
+  if (!validateData(data)) return;
+
+  const orderText = makeOrderText(data);
+  resultBox.innerText = orderText;
+
+  try {
+    const res = await fetch(SCRIPT_URL, {
+      method:"POST",
+      body:JSON.stringify({
+        ...data,
+        orderText
+      })
+    });
+
+    const result = await res.json();
+
+    if (result.success) {
+      alert("구글시트 저장 완료");
+    } else {
+      alert("저장 실패: " + (result.message || "오류"));
+    }
+
+  } catch(err) {
+    alert("저장 중 오류가 발생했습니다.\n" + err.message);
+  }
+}
+</script>
+</body>
+</html>
