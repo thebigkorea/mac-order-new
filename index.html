@@ -668,31 +668,70 @@ async function loadDraft(){
     const draft =
       result.draft;
 
+    const orderDateText =
+      draft.orderDate ||
+      "날짜 정보 없음";
+
+    const savedAtText =
+      draft.savedAt ||
+      "저장시간 정보 없음";
+
     const shouldLoad =
       confirm(
-        "작성 중인 MAC 발주가 있습니다.\n\n" +
-        "최종 저장시간: " +
-        (draft.savedAt || "") +
-        "\n\n이어서 작성하시겠습니까?"
+`작성 중인 MAC 발주가 있습니다.
+
+거래처 : ${draft.vendorName || vendorName}
+발주일 : ${orderDateText}
+마지막 저장 : ${savedAtText}
+
+이어서 작성하시겠습니까?
+
+확인 : 불러오기
+취소 : 새로 시작`
       );
 
-    if (!shouldLoad) {
+    /*
+     * 확인을 누르면 기존 임시저장 복원
+     */
+    if (shouldLoad) {
+
+      applyDraftData(
+        draft
+      );
 
       setDraftStatus(
-        `임시저장 있음 · ${
-          draft.savedAt || ""
-        }`
+        `임시저장 불러옴 · ${savedAtText}`
       );
 
       return;
     }
 
-    applyDraftData(draft);
+    /*
+     * 취소를 누르면 기존 임시저장 삭제
+     */
+    const deleted =
+      await deleteServerDraft(
+        storeName,
+        vendorName
+      );
+
+    if (!deleted) {
+
+      setDraftStatus(
+        "임시저장을 삭제하지 못했습니다."
+      );
+
+      alert(
+        "새로 시작하는 중 임시저장을 삭제하지 못했습니다."
+      );
+
+      return;
+    }
+
+    clearOrderForm();
 
     setDraftStatus(
-      `임시저장 불러옴 · ${
-        draft.savedAt || ""
-      }`
+      "기존 임시저장을 삭제하고 새 발주를 시작했습니다."
     );
 
   } catch (err) {
@@ -703,6 +742,76 @@ async function loadDraft(){
 
     console.error(err);
   }
+}
+
+async function deleteServerDraft(
+  storeName,
+  vendorName
+){
+
+  try {
+
+    const res =
+      await fetch(
+        SCRIPT_URL,
+        {
+          method: "POST",
+
+          body:
+            JSON.stringify({
+              action: "deleteDraft",
+              storeName,
+              vendorName
+            })
+        }
+      );
+
+    const result =
+      await res.json();
+
+    return Boolean(
+      result &&
+      result.success
+    );
+
+  } catch (err) {
+
+    console.error(
+      "임시저장 삭제 오류:",
+      err
+    );
+
+    return false;
+  }
+}
+
+
+function clearOrderForm(){
+
+  items.forEach((_, i) => {
+
+    const input =
+      document.getElementById(
+        `q${i}`
+      );
+
+    if (input) {
+      input.value = "";
+    }
+  });
+
+  document.getElementById(
+    "receiverPhone"
+  ).value = "";
+
+  document.getElementById(
+    "remark"
+  ).value = "";
+
+  resultBox.innerText =
+    "발주문이 여기 표시됩니다.";
+
+  setTodayDate();
 }
 
 
