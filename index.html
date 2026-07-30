@@ -109,6 +109,21 @@ button{
 }
 .btn-primary{background:#111;color:#fff}
 .btn-sub{background:#eef2f6;color:#111}
+.btn-draft{
+  background:#f2b84b;
+  color:#2d2100;
+}
+
+.draft-status{
+  margin-top:12px;
+  padding:11px 14px;
+  background:#fff8e8;
+  border:1px solid #efd59e;
+  border-radius:10px;
+  color:#705000;
+  font-size:13px;
+  line-height:1.5;
+}
 .preview{
   margin-top:14px;
   background:#f8fafc;
@@ -190,11 +205,49 @@ button{
       </div>
 
       <div class="btn-wrap">
-        <button type="button" class="btn-primary" onclick="generateOrder()">발주문 생성</button>
-        <button type="button" class="btn-primary" onclick="saveAndSend()">시트저장</button>
-        <button type="button" class="btn-sub" onclick="copyText()">발주문 복사</button>
-        <button type="button" class="btn-sub" onclick="resetForm()">초기화</button>
-      </div>
+
+  <button
+    type="button"
+    class="btn-primary"
+    onclick="generateOrder()">
+    발주문 생성
+  </button>
+
+  <button
+    type="button"
+    class="btn-draft"
+    onclick="saveDraft(false)">
+    임시저장
+  </button>
+
+  <button
+    type="button"
+    class="btn-primary"
+    onclick="saveAndSend()">
+    최종 시트저장
+  </button>
+
+  <button
+    type="button"
+    class="btn-sub"
+    onclick="copyText()">
+    발주문 복사
+  </button>
+
+  <button
+    type="button"
+    class="btn-sub"
+    onclick="resetForm()">
+    초기화
+  </button>
+
+</div>
+
+<div
+  id="draftStatus"
+  class="draft-status">
+  임시저장 내역 확인 중...
+</div>
 
       <div class="preview" id="result">발주문이 여기 표시됩니다.</div>
       <div class="note">저장 버튼을 누르면 새 구글시트 발주내역에 저장됩니다.</div>
@@ -280,6 +333,55 @@ items.forEach((item, i) => {
 
 setTodayDate();
 
+/*
+ * 수량 입력 자동 임시저장
+ */
+document
+  .querySelectorAll(".qty-input")
+  .forEach(input => {
+
+    input.addEventListener(
+      "input",
+      scheduleDraftSave
+    );
+  });
+
+
+/*
+ * 기본정보 자동 임시저장
+ */
+[
+  "orderDate",
+  "storeName",
+  "vendorName",
+  "receiverPhone",
+  "remark"
+].forEach(id => {
+
+  const element =
+    document.getElementById(id);
+
+  if (!element) {
+    return;
+  }
+
+  element.addEventListener(
+    "input",
+    scheduleDraftSave
+  );
+
+  element.addEventListener(
+    "change",
+    scheduleDraftSave
+  );
+});
+
+
+/*
+ * 화면 진입 시 서버 임시저장 확인
+ */
+loadDraft();
+
 function setTodayDate(){
   const today = new Date();
   document.getElementById("orderDate").value =
@@ -319,6 +421,369 @@ function collectOrderData(){
     remark:document.getElementById("remark").value.trim(),
     orderItems
   };
+}
+
+function collectDraftData(){
+
+  const draftItems =
+    items.map((item, i) => {
+
+      const input =
+        document.getElementById(`q${i}`);
+
+      return {
+        name: item[0],
+        unit: item[1],
+        qty: input ? input.value : ""
+      };
+    });
+
+  return {
+    action: "saveDraft",
+
+    orderDate:
+      document.getElementById(
+        "orderDate"
+      ).value,
+
+    storeName:
+      document.getElementById(
+        "storeName"
+      ).value.trim(),
+
+    vendorName:
+      document.getElementById(
+        "vendorName"
+      ).value.trim(),
+
+    receiverPhone:
+      document.getElementById(
+        "receiverPhone"
+      ).value.replace(
+        /[^0-9]/g,
+        ""
+      ),
+
+    remark:
+      document.getElementById(
+        "remark"
+      ).value.trim(),
+
+    draftItems,
+
+    orderText:
+      resultBox.innerText ===
+      "발주문이 여기 표시됩니다."
+        ? ""
+        : resultBox.innerText
+  };
+}
+
+let draftSaveTimer = null;
+let draftSaving = false;
+
+
+/*
+ * 서버 임시저장
+ */
+async function saveDraft(isAutoSave = false){
+
+  if (draftSaving) {
+    return;
+  }
+
+  const data =
+    collectDraftData();
+
+  if (!data.storeName) {
+
+    if (!isAutoSave) {
+      alert("매장명을 입력해 주세요.");
+    }
+
+    return;
+  }
+
+  if (!data.vendorName) {
+
+    if (!isAutoSave) {
+      alert("발주처명을 입력해 주세요.");
+    }
+
+    return;
+  }
+
+  draftSaving = true;
+
+  setDraftStatus(
+    isAutoSave
+      ? "자동 임시저장 중..."
+      : "임시저장 중..."
+  );
+
+  try {
+
+    const res =
+      await fetch(
+        SCRIPT_URL,
+        {
+          method: "POST",
+
+          body: JSON.stringify(data)
+        }
+      );
+
+    const result =
+      await res.json();
+
+    if (!result.success) {
+
+      throw new Error(
+        result.message ||
+        "임시저장 실패"
+      );
+    }
+
+    setDraftStatus(
+      `임시저장됨 · ${
+        result.savedAt || ""
+      }`
+    );
+
+    if (!isAutoSave) {
+
+      alert(
+        "현재 발주 내용이 임시저장되었습니다."
+      );
+    }
+
+  } catch (err) {
+
+    setDraftStatus(
+      "임시저장 실패 · 다시 시도해 주세요."
+    );
+
+    if (!isAutoSave) {
+
+      alert(
+        "임시저장 중 오류가 발생했습니다.\n" +
+        err.message
+      );
+    }
+
+  } finally {
+
+    draftSaving = false;
+  }
+}
+
+
+/*
+ * 입력 후 3초가 지나면 자동 저장
+ */
+function scheduleDraftSave(){
+
+  clearTimeout(
+    draftSaveTimer
+  );
+
+  draftSaveTimer =
+    setTimeout(
+      function(){
+
+        saveDraft(true);
+
+      },
+      3000
+    );
+
+  setDraftStatus(
+    "변경사항 있음 · 잠시 후 자동 저장"
+  );
+}
+
+
+/*
+ * 상태 문구 표시
+ */
+function setDraftStatus(message){
+
+  const status =
+    document.getElementById(
+      "draftStatus"
+    );
+
+  if (status) {
+    status.innerText = message;
+  }
+}
+
+async function loadDraft(){
+
+  const storeName =
+    document.getElementById(
+      "storeName"
+    ).value.trim();
+
+  const vendorName =
+    document.getElementById(
+      "vendorName"
+    ).value.trim();
+
+  const query =
+    new URLSearchParams({
+      action: "loadDraft",
+      storeName,
+      vendorName,
+      t: Date.now()
+    });
+
+  setDraftStatus(
+    "임시저장 내역 확인 중..."
+  );
+
+  try {
+
+    const res =
+      await fetch(
+        `${SCRIPT_URL}?${query.toString()}`
+      );
+
+    const result =
+      await res.json();
+
+    if (
+      !result.success ||
+      !result.exists ||
+      !result.draft
+    ) {
+
+      setDraftStatus(
+        "저장된 임시 발주가 없습니다."
+      );
+
+      return;
+    }
+
+    const draft =
+      result.draft;
+
+    const shouldLoad =
+      confirm(
+        "작성 중인 MAC 발주가 있습니다.\n\n" +
+        "최종 저장시간: " +
+        (draft.savedAt || "") +
+        "\n\n이어서 작성하시겠습니까?"
+      );
+
+    if (!shouldLoad) {
+
+      setDraftStatus(
+        `임시저장 있음 · ${
+          draft.savedAt || ""
+        }`
+      );
+
+      return;
+    }
+
+    applyDraftData(draft);
+
+    setDraftStatus(
+      `임시저장 불러옴 · ${
+        draft.savedAt || ""
+      }`
+    );
+
+  } catch (err) {
+
+    setDraftStatus(
+      "임시저장 내역을 확인하지 못했습니다."
+    );
+
+    console.error(err);
+  }
+}
+
+
+function applyDraftData(draft){
+
+  if (draft.orderDate) {
+
+    document.getElementById(
+      "orderDate"
+    ).value =
+      draft.orderDate;
+  }
+
+  if (draft.storeName) {
+
+    document.getElementById(
+      "storeName"
+    ).value =
+      draft.storeName;
+  }
+
+  if (draft.vendorName) {
+
+    document.getElementById(
+      "vendorName"
+    ).value =
+      draft.vendorName;
+  }
+
+  document.getElementById(
+    "receiverPhone"
+  ).value =
+    draft.receiverPhone || "";
+
+  document.getElementById(
+    "remark"
+  ).value =
+    draft.remark || "";
+
+  const savedItems =
+    Array.isArray(
+      draft.draftItems
+    )
+      ? draft.draftItems
+      : [];
+
+  const savedMap =
+    new Map();
+
+  savedItems.forEach(item => {
+
+    savedMap.set(
+      String(item.name || ""),
+      item.qty
+    );
+  });
+
+  items.forEach((item, i) => {
+
+    const input =
+      document.getElementById(
+        `q${i}`
+      );
+
+    if (!input) {
+      return;
+    }
+
+    const savedQty =
+      savedMap.get(item[0]);
+
+    input.value =
+      savedQty === undefined ||
+      savedQty === null
+        ? ""
+        : savedQty;
+  });
+
+  resultBox.innerText =
+    draft.orderText ||
+    "발주문이 여기 표시됩니다.";
 }
 
 function makeOrderText(data){
@@ -363,13 +828,89 @@ function copyText(){
     .catch(() => alert("복사에 실패했습니다. 길게 눌러 복사해 주세요."));
 }
 
-function resetForm(){
-  items.forEach((_, i) => {
-    document.getElementById(`q${i}`).value = "";
-  });
-  document.getElementById("remark").value = "";
-  resultBox.innerText = "발주문이 여기 표시됩니다.";
-  setTodayDate();
+async function resetForm(){
+
+  const confirmed =
+    confirm(
+      "현재 입력 내용과 서버 임시저장을 모두 삭제하시겠습니까?"
+    );
+
+  if (!confirmed) {
+    return;
+  }
+
+  clearTimeout(
+    draftSaveTimer
+  );
+
+  const storeName =
+    document.getElementById(
+      "storeName"
+    ).value.trim();
+
+  const vendorName =
+    document.getElementById(
+      "vendorName"
+    ).value.trim();
+
+  try {
+
+    const res =
+      await fetch(
+        SCRIPT_URL,
+        {
+          method: "POST",
+
+          body: JSON.stringify({
+            action: "deleteDraft",
+            storeName,
+            vendorName
+          })
+        }
+      );
+
+    const result =
+      await res.json();
+
+    if (!result.success) {
+
+      throw new Error(
+        result.message ||
+        "임시저장 삭제 실패"
+      );
+    }
+
+    items.forEach((_, i) => {
+
+      document.getElementById(
+        `q${i}`
+      ).value = "";
+    });
+
+    document.getElementById(
+      "receiverPhone"
+    ).value = "";
+
+    document.getElementById(
+      "remark"
+    ).value = "";
+
+    resultBox.innerText =
+      "발주문이 여기 표시됩니다.";
+
+    setTodayDate();
+
+    setDraftStatus(
+      "입력 내용과 임시저장이 삭제되었습니다."
+    );
+
+  } catch (err) {
+
+    alert(
+      "초기화 중 오류가 발생했습니다.\n" +
+      err.message
+    );
+  }
 }
 
 async function saveAndSend(){
@@ -383,18 +924,35 @@ async function saveAndSend(){
     const res = await fetch(SCRIPT_URL, {
       method:"POST",
       body:JSON.stringify({
-        ...data,
-        orderText
-      })
+  action: "saveOrder",
+  ...data,
+  orderText
+})
     });
 
     const result = await res.json();
 
     if (result.success) {
-      alert("구글시트 저장 완료");
-    } else {
-      alert("저장 실패: " + (result.message || "오류"));
-    }
+
+  clearTimeout(
+    draftSaveTimer
+  );
+
+  setDraftStatus(
+    "최종 발주 완료 · 임시저장 삭제됨"
+  );
+
+  alert(
+    "구글시트 저장 완료\n임시저장 내역도 삭제되었습니다."
+  );
+
+} else {
+
+  alert(
+    "저장 실패: " +
+    (result.message || "오류")
+  );
+}
 
   } catch(err) {
     alert("저장 중 오류가 발생했습니다.\n" + err.message);
